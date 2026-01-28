@@ -5,6 +5,7 @@ import { config } from './config/env.js'
 import { errorHandler } from './middleware/errorHandler.js'
 import { apiLimiter } from './middleware/rateLimiter.js'
 import healthRouter from './routes/health.js'
+import authRouter from './routes/auth.js'
 
 // Create Express application
 export function createApp(): Application {
@@ -29,7 +30,10 @@ export function createApp(): Application {
   // Health check route (no prefix)
   app.use(healthRouter)
 
-  // API routes will be added here in later tasks
+  // API routes
+  app.use(`${config.apiPrefix}/auth`, authRouter)
+
+  // API root endpoint
   app.get(config.apiPrefix, (_req, res) => {
     res.json({
       message: 'RiseRoutes AI Ads Intelligence Platform API',

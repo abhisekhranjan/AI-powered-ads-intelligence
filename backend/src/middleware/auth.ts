@@ -54,6 +54,6 @@ export function authenticate(
 // Generate JWT token
 export function generateToken(userId: string, email: string): string {
   return jwt.sign({ userId, email }, config.jwt.secret, {
-    expiresIn: config.jwt.expiresIn,
-  })
+    expiresIn: config.jwt.expiresIn as string,
+  } as jwt.SignOptions)
 }
