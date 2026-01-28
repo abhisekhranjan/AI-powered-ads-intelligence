@@ -1,0 +1,53 @@
+import express, { Application } from 'express'
+import cors from 'cors'
+import helmet from 'helmet'
+import { config } from './config/env.js'
+import { errorHandler } from './middleware/errorHandler.js'
+import { apiLimiter } from './middleware/rateLimiter.js'
+import healthRouter from './routes/health.js'
+
+// Create Express application
+export function createApp(): Application {
+  const app = express()
+
+  // Security middleware
+  app.use(helmet())
+  app.use(
+    cors({
+      origin: config.cors.origin,
+      credentials: true,
+    })
+  )
+
+  // Body parsing middleware
+  app.use(express.json({ limit: '10mb' }))
+  app.use(express.urlencoded({ extended: true, limit: '10mb' }))
+
+  // Rate limiting
+  app.use(config.apiPrefix, apiLimiter)
+
+  // Health check route (no prefix)
+  app.use(healthRouter)
+
+  // API routes will be added here in later tasks
+  app.get(config.apiPrefix, (_req, res) => {
+    res.json({
+      message: 'RiseRoutes AI Ads Intelligence Platform API',
+      version: '1.0.0',
+      status: 'running',
+    })
+  })
+
+  // 404 handler
+  app.use((_req, res) => {
+    res.status(404).json({
+      status: 'error',
+      message: 'Route not found',
+    })
+  })
+
+  // Error handling middleware (must be last)
+  app.use(errorHandler)
+
+  return app
+}
