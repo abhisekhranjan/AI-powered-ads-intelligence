@@ -21,11 +21,12 @@ export class TargetingRecommendationRepository extends BaseRepository<TargetingR
    * Map database row to TargetingRecommendation model
    */
   protected mapRowToModel(row: RowDataPacket): TargetingRecommendation {
+    const targetingData = this.parseJsonField(row.targeting_data)
     return {
       id: row.id,
       session_id: row.session_id,
       platform: row.platform,
-      targeting_data: this.parseJsonField(row.targeting_data),
+      targeting_data: targetingData || {} as any,
       confidence_scores: this.parseJsonField(row.confidence_scores),
       explanations: this.parseJsonField(row.explanations),
       created_at: row.created_at
@@ -49,7 +50,7 @@ export class TargetingRecommendationRepository extends BaseRepository<TargetingR
     }
 
     // Serialize JSON fields
-    const dbData = {
+    const dbData: any = {
       ...recommendationData,
       targeting_data: this.serializeJsonField(recommendationData.targeting_data),
       confidence_scores: this.serializeJsonField(recommendationData.confidence_scores),

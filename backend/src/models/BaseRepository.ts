@@ -4,7 +4,7 @@
  */
 
 import { RowDataPacket, ResultSetHeader, PoolConnection } from 'mysql2/promise'
-import { pool, query, transaction } from '../config/database.js'
+import { query, transaction } from '../config/database.js'
 import { DatabaseError, PaginationParams, PaginatedResult } from './types.js'
 
 export abstract class BaseRepository<T> {

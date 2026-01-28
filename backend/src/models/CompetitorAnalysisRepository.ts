@@ -45,7 +45,7 @@ export class CompetitorAnalysisRepository extends BaseRepository<CompetitorAnaly
     }
 
     // Serialize JSON fields
-    const dbData = {
+    const dbData: any = {
       ...analysisData,
       positioning: this.serializeJsonField(analysisData.positioning),
       audience_insights: this.serializeJsonField(analysisData.audience_insights),

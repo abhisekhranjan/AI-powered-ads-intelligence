@@ -41,7 +41,7 @@ export class ExportHistoryRepository extends BaseRepository<ExportHistory> {
     }
 
     // Serialize JSON fields
-    const dbData = {
+    const dbData: any = {
       ...exportData,
       export_data: this.serializeJsonField(exportData.export_data)
     }

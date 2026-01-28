@@ -47,7 +47,7 @@ export class WebsiteAnalysisRepository extends BaseRepository<WebsiteAnalysis> {
     }
 
     // Serialize JSON fields
-    const dbData = {
+    const dbData: any = {
       ...analysisData,
       value_propositions: this.serializeJsonField(analysisData.value_propositions),
       target_audience: this.serializeJsonField(analysisData.target_audience),

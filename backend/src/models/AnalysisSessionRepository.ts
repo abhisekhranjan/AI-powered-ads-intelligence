@@ -67,7 +67,7 @@ export class AnalysisSessionRepository extends BaseRepository<AnalysisSession> {
     }
 
     // Serialize JSON fields
-    const dbData = {
+    const dbData: any = {
       ...sessionData,
       competitor_urls: this.serializeJsonField(sessionData.competitor_urls),
       analysis_data: this.serializeJsonField(sessionData.analysis_data)
