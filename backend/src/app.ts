@@ -6,6 +6,8 @@ import { errorHandler } from './middleware/errorHandler.js'
 import { apiLimiter } from './middleware/rateLimiter.js'
 import healthRouter from './routes/health.js'
 import authRouter from './routes/auth.js'
+import analysisRouter from './routes/analysis.js'
+import exportRouter from './routes/export.js'
 
 // Create Express application
 export function createApp(): Application {
@@ -32,6 +34,8 @@ export function createApp(): Application {
 
   // API routes
   app.use(`${config.apiPrefix}/auth`, authRouter)
+  app.use(`${config.apiPrefix}/analysis`, analysisRouter)
+  app.use(`${config.apiPrefix}/export`, exportRouter)
 
   // API root endpoint
   app.get(config.apiPrefix, (_req, res) => {
