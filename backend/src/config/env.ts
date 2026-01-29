@@ -26,8 +26,17 @@ const envSchema = z.object({
   JWT_SECRET: z.string().min(32),
   JWT_EXPIRES_IN: z.string().default('7d'),
 
-  // OpenAI
+  // AI Provider
+  AI_PROVIDER: z.enum(['openai', 'openrouter', 'gemini']).default('openrouter'),
+  
+  // OpenAI (Direct)
   OPENAI_API_KEY: z.string().optional(),
+  
+  // OpenRouter
+  OPENROUTER_API_KEY: z.string().optional(),
+  
+  // Google Gemini
+  GEMINI_API_KEY: z.string().optional(),
 
   // Rate Limiting
   RATE_LIMIT_WINDOW_MS: z.string().transform(Number).default('900000'),
@@ -67,8 +76,11 @@ export const config = {
     secret: parsed.data.JWT_SECRET,
     expiresIn: parsed.data.JWT_EXPIRES_IN,
   },
-  openai: {
-    apiKey: parsed.data.OPENAI_API_KEY,
+  ai: {
+    provider: parsed.data.AI_PROVIDER,
+    openaiKey: parsed.data.OPENAI_API_KEY,
+    openrouterKey: parsed.data.OPENROUTER_API_KEY,
+    geminiKey: parsed.data.GEMINI_API_KEY,
   },
   rateLimit: {
     windowMs: parsed.data.RATE_LIMIT_WINDOW_MS,

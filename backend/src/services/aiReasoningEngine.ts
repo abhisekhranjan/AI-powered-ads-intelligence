@@ -1,10 +1,6 @@
 /**
  * AI Reasoning Engine Service
- * 
- * Integrates OpenAI GPT-4 for intelligent analysis and reasoning tasks.
- * Provides prompt templates for various analysis scenarios and validates responses.
- * 
- * Requirements: 2.1, 2.2, 2.4
+ * OpenRouter-compatible, production-safe
  */
 
 import OpenAI from 'openai'
@@ -18,21 +14,17 @@ import {
 } from '../models/types.js'
 
 // ============================================================================
-// Types and Interfaces
+// Types
 // ============================================================================
 
 export interface AIAnalysisRequest {
-  websiteContent: {
-    url: string
-    title?: string
-    description?: string
-    text: string
-    headings: string[]
-    businessModel?: BusinessModel
-    valuePropositions?: ValueProposition[]
-  }
-  analysisType: 'business_model' | 'audience_insights' | 'value_propositions' | 'content_themes' | 'targeting_recommendations'
-  context?: Record<string, any>
+  websiteContent: any
+  analysisType:
+    | 'business_model'
+    | 'audience_insights'
+    | 'value_propositions'
+    | 'content_themes'
+    | 'targeting_recommendations'
 }
 
 export interface AIAnalysisResponse {
@@ -103,39 +95,6 @@ export interface GoogleTargetingRecommendation {
 // ============================================================================
 
 export class PromptTemplates {
-  /**
-   * Generate prompt for business model analysis
-   */
-  static businessModelAnalysis(websiteContent: any): string {
-    return `Analyze the following website content and determine the business model.
-
-Website URL: ${websiteContent.url}
-Title: ${websiteContent.title || 'N/A'}
-Description: ${websiteContent.description || 'N/A'}
-
-Main Headings:
-${websiteContent.headings.slice(0, 10).join('\n')}
-
-Content Sample:
-${websiteContent.text.substring(0, 2000)}
-
-Based on this content, identify:
-1. The primary business model (e.g., B2B SaaS, E-commerce, Service Business, etc.)
-2. A clear description of how the business operates
-3. Your confidence level (0-1) in this classification
-
-Respond in JSON format:
-{
-  "type": "business model type",
-  "description": "detailed description",
-  "confidence": 0.85,
-  "reasoning": "explanation of why you chose this classification"
-}`
-  }
-
-  /**
-   * Generate prompt for audience insights analysis
-   */
   static audienceInsightsAnalysis(websiteContent: any): string {
     return `Analyze the following website content to identify target audience insights.
 
@@ -160,14 +119,14 @@ Respond in JSON format:
 {
   "demographics": {
     "age_ranges": ["25-34", "35-44"],
-    "genders": ["all", "male", "female"],
-    "locations": ["United States", "Urban areas"],
+    "genders": ["all"],
+    "locations": ["United States"],
     "job_titles": ["Marketing Manager", "Business Owner"],
     "income_level": "Middle to Upper income"
   },
   "psychographics": {
-    "interests": ["Technology", "Business Growth", "Marketing"],
-    "values": ["Innovation", "Efficiency", "Results"],
+    "interests": ["Technology", "Business Growth"],
+    "values": ["Innovation", "Efficiency"],
     "lifestyle": "Professional, busy, tech-savvy"
   },
   "pain_points": [
@@ -186,596 +145,590 @@ Respond in JSON format:
 }`
   }
 
-  /**
-   * Generate prompt for Meta Ads targeting recommendations
-   */
   static metaTargetingRecommendations(websiteContent: any, audienceInsights: AudienceInsights): string {
-    return `Generate Meta (Facebook/Instagram) Ads targeting recommendations for this business.
+    return `You are an expert Meta Ads specialist. Generate HIGHLY SPECIFIC, ACCURATE targeting recommendations.
 
 Website URL: ${websiteContent.url}
 Business Model: ${websiteContent.businessModel?.type || 'Unknown'}
 
-Value Propositions:
-${websiteContent.valuePropositions?.map((vp: ValueProposition) => `- ${vp.proposition}`).join('\n') || 'N/A'}
+ACTUAL WEBSITE CONTENT:
+Title: ${websiteContent.title}
+Description: ${websiteContent.description}
 
-Target Audience Insights:
+Main Headings:
+${websiteContent.headings?.slice(0, 15).join('\n') || 'N/A'}
+
+Key Content:
+${websiteContent.paragraphs?.slice(0, 10).join('\n\n') || 'N/A'}
+
+Features/Benefits:
+${websiteContent.listItems?.slice(0, 15).join('\n') || 'N/A'}
+
+CTAs:
+${websiteContent.ctas?.join(', ') || 'N/A'}
+
+Target Audience:
 Demographics: ${JSON.stringify(audienceInsights.demographics || {})}
-Interests: ${JSON.stringify(audienceInsights.psychographics?.interests || [])}
 Pain Points: ${JSON.stringify(audienceInsights.pain_points || [])}
 Goals: ${JSON.stringify(audienceInsights.goals || [])}
 
-Generate specific Meta Ads targeting recommendations including:
-1. Demographics (age ranges, genders, locations)
-2. Detailed interests (be specific with Meta's interest categories)
-3. Behaviors (purchase behaviors, device usage, etc.)
-4. Custom audience suggestions (website visitors, email lists, etc.)
-5. Lookalike audience recommendations
-
-For each recommendation, provide clear reasoning explaining WHY this targeting makes sense.
+CRITICAL: Use ONLY real Meta Ads categories. Be ULTRA-SPECIFIC. Provide evidence from website content.
 
 Respond in JSON format:
 {
   "demographics": {
-    "age_ranges": ["25-34", "35-44", "45-54"],
+    "age_ranges": ["25-34", "35-44"],
     "genders": ["all"],
-    "locations": ["United States", "Canada", "United Kingdom"]
+    "locations": ["United States", "Canada"]
   },
   "interests": [
     {
-      "category": "Business and Industry",
-      "specific_interests": ["Small business", "Entrepreneurship", "Business management"],
-      "reasoning": "These interests align with the target audience of business owners"
+      "category": "Business and industry",
+      "specific_interests": ["Small business", "Entrepreneurship"],
+      "reasoning": "Website explicitly targets small business owners",
+      "confidence": 0.92,
+      "evidence": "Direct mention in hero section"
     }
   ],
   "behaviors": [
     {
       "behavior": "Small business owners",
-      "reasoning": "Direct match with the target customer profile"
+      "reasoning": "Content addresses business owners with growth pain points",
+      "confidence": 0.88,
+      "evidence": "Multiple references to business growth"
     }
   ],
   "custom_audiences": [
     {
       "type": "Website visitors (past 30 days)",
-      "description": "People who visited the website but didn't convert",
-      "reasoning": "Retarget warm leads who showed interest"
+      "description": "Retarget warm leads who visited pricing pages",
+      "reasoning": "High-intent visitors who showed interest",
+      "implementation": "Install Meta Pixel, create custom audience from URL contains '/pricing'"
     }
   ],
   "lookalike_suggestions": [
     {
       "source": "Email list subscribers",
       "percentage": 1,
-      "reasoning": "Find similar users to existing engaged audience"
+      "reasoning": "Find similar high-value prospects",
+      "expected_reach": "500K-2M users"
     }
   ],
   "confidence_score": 0.85,
-  "overall_reasoning": "Summary of the targeting strategy"
+  "overall_reasoning": "Targeting based on clear business signals and website evidence"
 }`
   }
 
-  /**
-   * Generate prompt for Google Ads targeting recommendations
-   */
   static googleTargetingRecommendations(websiteContent: any, audienceInsights: AudienceInsights): string {
-    return `Generate Google Ads targeting recommendations for this business.
+    return `You are an expert Google Ads specialist. Generate HIGHLY ACCURATE, ACTIONABLE targeting recommendations.
 
 Website URL: ${websiteContent.url}
 Business Model: ${websiteContent.businessModel?.type || 'Unknown'}
 
-Value Propositions:
-${websiteContent.valuePropositions?.map((vp: ValueProposition) => `- ${vp.proposition}`).join('\n') || 'N/A'}
-
-Target Audience Insights:
+Target Audience:
 Pain Points: ${JSON.stringify(audienceInsights.pain_points || [])}
 Goals: ${JSON.stringify(audienceInsights.goals || [])}
-Behaviors: ${JSON.stringify(audienceInsights.behaviors || [])}
 
-Generate specific Google Ads targeting recommendations including:
-1. Keyword clusters organized by user intent (not just syntax)
-2. Match types for each keyword (exact, phrase, broad)
-3. Estimated search volume categories (high, medium, low)
-4. Audience targeting options (in-market, affinity, custom intent)
-5. Demographic targeting
-6. Placement recommendations for Display/YouTube
-
-For each keyword cluster, explain the INTENT behind the search and why it matters.
+CRITICAL: Generate keywords people ACTUALLY search for. Use realistic search volumes. Organize by USER INTENT.
 
 Respond in JSON format:
 {
   "keyword_clusters": [
     {
-      "intent": "Problem-aware: Looking for solutions to specific pain point",
+      "intent": "Commercial Investigation: Users comparing solutions",
       "keywords": [
         {
-          "keyword": "business management software",
+          "keyword": "best project management software for small teams",
           "match_type": "phrase",
-          "estimated_volume": "high"
+          "estimated_volume": "medium",
+          "reasoning": "High-intent comparison search"
         }
       ],
-      "reasoning": "Users searching these terms are actively looking for solutions"
+      "reasoning": "Users actively evaluating solutions",
+      "expected_cpc": "$3-8",
+      "conversion_potential": "High"
     }
   ],
   "audiences": [
     {
-      "type": "In-Market: Business Services",
+      "type": "In-Market: Business Software",
       "description": "Users actively researching business software",
-      "reasoning": "High intent audience ready to make purchase decisions"
+      "reasoning": "High intent with demonstrated purchase behavior",
+      "estimated_reach": "500K-2M users",
+      "recommended_bid_adjustment": "+20%"
     }
   ],
   "demographics": {
     "age_ranges": ["25-34", "35-44", "45-54"],
     "genders": ["all"],
-    "household_income": ["top 30%", "top 40%"]
+    "household_income": ["top 30%", "top 40%"],
+    "reasoning": "Business decision makers with purchasing power"
   },
   "placements": [
     {
       "type": "YouTube channels",
-      "examples": ["Business education channels", "Entrepreneurship content"],
-      "reasoning": "Reach audience where they consume relevant content"
+      "examples": ["Business education channels", "Productivity creators"],
+      "reasoning": "Reach audience consuming relevant content",
+      "recommended_strategy": "In-stream ads on business content"
     }
   ],
-  "confidence_score": 0.85,
-  "overall_reasoning": "Summary of the keyword and targeting strategy"
+  "negative_keywords": ["free", "template", "tutorial"],
+  "confidence_score": 0.88,
+  "overall_reasoning": "Keyword strategy focuses on high-intent searches"
 }`
   }
 
-  /**
-   * Generate prompt for value proposition extraction
-   */
-  static valuePropositionExtraction(websiteContent: any): string {
-    return `Extract and analyze the value propositions from this website.
+  static keywordFocusedMetaTargeting(websiteContent: any, audienceInsights: AudienceInsights, keywords: string[]): string {
+    return `You are an expert Meta Ads specialist. Generate ULTRA-PRECISE, KEYWORD-FOCUSED targeting.
 
 Website URL: ${websiteContent.url}
-Title: ${websiteContent.title || 'N/A'}
-Description: ${websiteContent.description || 'N/A'}
+🎯 FOCUS KEYWORDS: ${keywords.join(', ')}
 
-Main Headings:
-${websiteContent.headings.slice(0, 15).join('\n')}
+Website Content:
+Title: ${websiteContent.title}
+Headings: ${websiteContent.headings?.slice(0, 10).join('\n') || 'N/A'}
 
-Content Sample:
-${websiteContent.text.substring(0, 3000)}
+CRITICAL: Generate EXACTLY 10 audiences, 10 interests, 10 behaviors - all DIRECTLY related to: ${keywords.join(', ')}
 
-Identify the key value propositions - the unique benefits and promises this business offers.
-Categorize each proposition and rate its strength.
+Focus on HIGH-INTENT targeting showing PURCHASE INTENT for these keywords.
 
-Respond in JSON format:
-{
-  "value_propositions": [
-    {
-      "proposition": "The actual value proposition text",
-      "category": "speed|cost_savings|ease_of_use|quality|security|growth",
-      "strength": 0.85,
-      "reasoning": "Why this is a strong value proposition"
-    }
-  ],
-  "primary_value": "The main value proposition in one sentence",
-  "reasoning": "Overall analysis of the value propositions"
-}`
+Respond in JSON format with 10 of each category, laser-focused on the keywords.`
   }
 
-  /**
-   * Generate prompt for content theme analysis
-   */
-  static contentThemeAnalysis(websiteContent: any): string {
-    return `Analyze the content themes and messaging patterns on this website.
+  static keywordFocusedGoogleTargeting(websiteContent: any, audienceInsights: AudienceInsights, keywords: string[]): string {
+    return `You are an expert Google Ads specialist. Generate ULTRA-PRECISE, KEYWORD-FOCUSED targeting.
 
 Website URL: ${websiteContent.url}
-Business Model: ${websiteContent.businessModel?.type || 'Unknown'}
+🎯 FOCUS KEYWORDS: ${keywords.join(', ')}
 
-Content Sample:
-${websiteContent.text.substring(0, 3000)}
+CRITICAL: Generate EXACTLY 10 audiences, 10 interests, 10 behaviors for: ${keywords.join(', ')}
 
-Identify the main content themes and messaging patterns. Look for:
-1. Recurring topics and subjects
-2. Emotional appeals (trust, innovation, results, etc.)
-3. Key messaging pillars
-4. Brand personality traits
+Create keyword clusters with REAL search terms people actually type. Focus on HIGH-INTENT keywords.
 
-Respond in JSON format:
-{
-  "themes": [
-    {
-      "theme": "Innovation & Technology",
-      "keywords": ["innovative", "cutting-edge", "advanced"],
-      "frequency": 15,
-      "relevance_score": 0.85,
-      "reasoning": "Why this theme is important"
-    }
-  ],
-  "messaging_tone": "professional|casual|technical|friendly",
-  "brand_personality": ["innovative", "trustworthy", "results-driven"],
-  "reasoning": "Overall content analysis"
-}`
+Respond in JSON format with keyword clusters and targeting ALL focused on the provided keywords.`
   }
 }
 
 // ============================================================================
-// AI Reasoning Engine Service Class
+// AI ENGINE
 // ============================================================================
 
 export class AIReasoningEngine {
-  private openai: OpenAI | null = null
-  private readonly model = 'gpt-4-turbo-preview'
-  private readonly maxTokens = 2000
+  private openaiClient: OpenAI | null = null
+  private openrouterClient: OpenAI | null = null
+  private currentModel = ''
+  private readonly maxTokens = 4000
   private readonly temperature = 0.7
 
-  /**
-   * Initialize OpenAI client
-   */
-  private initializeClient(): OpenAI {
-    if (!this.openai) {
-      if (!config.openai.apiKey) {
-        throw new Error('OpenAI API key not configured. Please set OPENAI_API_KEY in environment variables.')
-      }
-
-      this.openai = new OpenAI({
-        apiKey: config.openai.apiKey
-      })
-
-      logger.info('OpenAI client initialized')
-    }
-
-    return this.openai
+  // Available models by provider
+  private readonly openaiModels = {
+    analysis: ['gpt-4o-mini', 'gpt-4o', 'gpt-3.5-turbo'],
+    creative: ['gpt-4o-mini', 'gpt-4o', 'gpt-3.5-turbo']
   }
 
-  /**
-   * Execute AI analysis with retry logic
-   */
-  private async executeWithRetry<T>(
-    operation: () => Promise<T>,
-    maxRetries: number = 3,
-    delay: number = 1000
-  ): Promise<T> {
-    let lastError: Error | null = null
+  private readonly openrouterModels = {
+    analysis: [
+      'meta-llama/llama-3.1-8b-instruct:free',
+      'meta-llama/llama-3.1-70b-instruct:free',
+      'meta-llama/llama-4-scout:free',
+      'meta-llama/llama-4-maverick:free',
+      'meta-llama/mistral-small-3.1-24b:free',
+      'meta-llama/mistral-small-3.2-24b:free',
+      'google/gemma-2-9b-it:free',
+      'google/gemma-3-4b:free',
+      'google/gemma-3-27b:free',
+      'google/gemini-flash-1.5:free',
+      'google/gemini-2.0-flash-exp:free',
+      'mistralai/mistral-7b-instruct:free',
+      'nousresearch/hermes-2-pro-llama-3-8b:free',
+      'deepseek/deepseek-chat-v3-0324:free',
+      'deepseek/deepseek-r1:free',
+      'tng/deepseek-r1t-chimera:free',
+      'tng/deepseek-r1t2-chimera:free',
+      'z.ai/glm-4.5-air:free',
+      'qwen/qwen2.5-vl-32b-instruct:free',
+      'nvidia/nemotron-nano-12b-2-vl:free'
+    ],
+    creative: [
+      'meta-llama/llama-3.1-8b-instruct:free',
+      'meta-llama/llama-3.1-70b-instruct:free',
+      'meta-llama/llama-4-scout:free',
+      'meta-llama/llama-4-maverick:free',
+      'meta-llama/mistral-small-3.1-24b:free',
+      'meta-llama/mistral-small-3.2-24b:free',
+      'google/gemma-2-9b-it:free',
+      'google/gemma-3-4b:free',
+      'google/gemma-3-27b:free',
+      'google/gemini-flash-1.5:free',
+      'google/gemini-2.0-flash-exp:free',
+      'mistralai/mistral-7b-instruct:free',
+      'nousresearch/hermes-2-pro-llama-3-8b:free',
+      'deepseek/deepseek-chat-v3-0324:free',
+      'deepseek/deepseek-r1:free',
+      'tng/deepseek-r1t-chimera:free',
+      'tng/deepseek-r1t2-chimera:free',
+      'z.ai/glm-4.5-air:free',
+      'qwen/qwen2.5-vl-32b-instruct:free',
+      'nvidia/nemotron-nano-12b-2-vl:free'
+    ]
+  }
 
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        return await operation()
-      } catch (error) {
-        lastError = error as Error
-        logger.warn(`AI analysis attempt ${attempt} failed: ${lastError.message}`)
+  private readonly geminiModels = {
+    analysis: ['gemini-2.5-flash', 'gemini-1.5-flash'],
+    creative: ['gemini-2.5-flash', 'gemini-1.5-flash']
+  }
 
-        if (attempt < maxRetries) {
-          // Exponential backoff
-          await new Promise(resolve => setTimeout(resolve, delay * attempt))
+  // ============================================================================
+  // Client Initialization
+  // ============================================================================
+
+  private initializeOpenAI(): OpenAI {
+    if (!this.openaiClient) {
+      if (!config.ai.openaiKey) {
+        throw new Error('OPENAI_API_KEY not set')
+      }
+
+      this.openaiClient = new OpenAI({
+        apiKey: config.ai.openaiKey
+      })
+
+      logger.info('✅ OpenAI client initialized')
+    }
+
+    return this.openaiClient
+  }
+
+  private initializeOpenRouter(): OpenAI {
+    if (!this.openrouterClient) {
+      if (!config.ai.openrouterKey) {
+        throw new Error('OPENROUTER_API_KEY not set')
+      }
+
+      this.openrouterClient = new OpenAI({
+        apiKey: config.ai.openrouterKey,
+        baseURL: 'https://openrouter.ai/api/v1',
+        defaultHeaders: {
+          'HTTP-Referer': 'https://yourappdomain.com',
+          'X-Title': 'AI Reasoning Engine'
         }
-      }
-    }
-
-    throw lastError || new Error('AI analysis failed after retries')
-  }
-
-  /**
-   * Call OpenAI API with prompt
-   */
-  private async callOpenAI(prompt: string, systemMessage?: string): Promise<AIAnalysisResponse> {
-    const client = this.initializeClient()
-
-    try {
-      logger.info('Calling OpenAI API...')
-
-      const response = await this.executeWithRetry(async () => {
-        return await client.chat.completions.create({
-          model: this.model,
-          messages: [
-            {
-              role: 'system',
-              content: systemMessage || 'You are an expert marketing analyst specializing in digital advertising and audience targeting. Provide detailed, actionable insights based on website analysis.'
-            },
-            {
-              role: 'user',
-              content: prompt
-            }
-          ],
-          temperature: this.temperature,
-          max_tokens: this.maxTokens,
-          response_format: { type: 'json_object' }
-        })
       })
 
-      const content = response.choices[0]?.message?.content
+      logger.info('✅ OpenRouter client initialized')
+    }
 
-      if (!content) {
-        throw new Error('No response content from OpenAI')
+    return this.openrouterClient
+  }
+
+  private async callGemini(prompt: string, systemMessage: string): Promise<any> {
+    if (!config.ai.geminiKey) {
+      throw new Error('GEMINI_API_KEY not set')
+    }
+
+    const models = this.geminiModels.creative
+    let lastError: any = null
+
+    for (const model of models) {
+      try {
+        this.currentModel = model
+        logger.info(`🧠 Calling GEMINI → ${model}`)
+
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-goog-api-key': config.ai.geminiKey
+            },
+            body: JSON.stringify({
+              contents: [{
+                parts: [{
+                  text: `${systemMessage}\n\n${prompt}`
+                }]
+              }],
+              generationConfig: {
+                temperature: this.temperature,
+                maxOutputTokens: this.maxTokens
+              }
+            })
+          }
+        )
+
+        if (!response.ok) {
+          const error = await response.json() as any
+          throw new Error(error.error?.message || `HTTP ${response.status}`)
+        }
+
+        const data = await response.json()
+        const content = data.candidates?.[0]?.content?.parts?.[0]?.text
+
+        if (!content) throw new Error('Empty response from Gemini')
+
+        logger.info(`✅ Success | Provider: gemini | Model: ${model}`)
+
+        return {
+          content,
+          tokensUsed: (data as any).usageMetadata?.totalTokenCount || 0
+        }
+      } catch (err: any) {
+        lastError = err
+        logger.warn(`⚠️ Gemini model failed: ${model} → ${err.message}`)
       }
+    }
 
-      // Parse JSON response
-      const parsedData = JSON.parse(content)
+    throw lastError || new Error('All Gemini models failed')
+  }
 
-      logger.info(`OpenAI API call successful. Tokens used: ${response.usage?.total_tokens || 0}`)
+  private getClient(provider: 'openai' | 'openrouter'): OpenAI {
+    return provider === 'openai' ? this.initializeOpenAI() : this.initializeOpenRouter()
+  }
 
-      return {
-        success: true,
-        data: parsedData,
-        reasoning: parsedData.reasoning || parsedData.overall_reasoning,
-        confidence: parsedData.confidence || parsedData.confidence_score || 0.8,
-        tokensUsed: response.usage?.total_tokens
+  // ============================================================================
+  // JSON Extraction (Bulletproof)
+  // ============================================================================
+
+  private extractJSON(text: string): any {
+    // Try fenced code block first
+    const fenced = text.match(/```json\s*([\s\S]*?)```/)
+    if (fenced) return JSON.parse(fenced[1])
+
+    // Try to find JSON object
+    const start = text.indexOf('{')
+    const end = text.lastIndexOf('}')
+    if (start !== -1 && end !== -1) {
+      return JSON.parse(text.slice(start, end + 1))
+    }
+
+    throw new Error('No valid JSON found in response')
+  }
+
+  // ============================================================================
+  // Core AI Call (Multi-Provider Support with Fallback Chain)
+  // ============================================================================
+
+  private async callAI(
+    prompt: string,
+    systemMessage = 'You are an expert marketing analyst.',
+    taskType: 'analysis' | 'creative' = 'creative',
+    provider?: 'openai' | 'openrouter' | 'gemini',
+    modelOverride?: string
+  ): Promise<AIAnalysisResponse> {
+    // Priority order: 1. Gemini, 2. OpenAI, 3. OpenRouter
+    const providerOrder: Array<'gemini' | 'openai' | 'openrouter'> = ['gemini', 'openai', 'openrouter']
+    
+    let lastError: any = null
+
+    for (const currentProvider of providerOrder) {
+      // Skip if API key not configured
+      if (currentProvider === 'gemini' && !config.ai.geminiKey) continue
+      if (currentProvider === 'openai' && !config.ai.openaiKey) continue
+      if (currentProvider === 'openrouter' && !config.ai.openrouterKey) continue
+
+      try {
+        logger.info(`🔄 Trying provider: ${currentProvider.toUpperCase()}`)
+
+        // Handle Gemini separately (different API)
+        if (currentProvider === 'gemini') {
+          const result = await this.callGemini(prompt, systemMessage)
+          const data = this.extractJSON(result.content)
+
+          return {
+            success: true,
+            data,
+            reasoning: data.reasoning || data.overall_reasoning,
+            confidence: data.confidence || data.confidence_score || 0.8,
+            tokensUsed: result.tokensUsed
+          }
+        }
+
+        // Handle OpenAI and OpenRouter
+        const client = this.getClient(currentProvider)
+        const models = currentProvider === 'openai' ? this.openaiModels[taskType] : this.openrouterModels[taskType]
+        const modelsToTry = modelOverride ? [modelOverride] : models
+
+        for (const model of modelsToTry) {
+          try {
+            this.currentModel = model
+            logger.info(`🧠 Calling ${currentProvider.toUpperCase()} (${taskType}) → ${model}`)
+
+            const res = await client.chat.completions.create({
+              model,
+              temperature: this.temperature,
+              max_tokens: this.maxTokens,
+              messages: [
+                { role: 'system', content: systemMessage },
+                { role: 'user', content: prompt }
+              ]
+            })
+
+            const content = res.choices[0]?.message?.content
+            if (!content) throw new Error('Empty response')
+
+            const data = this.extractJSON(content)
+
+            logger.info(`✅ Success | Provider: ${currentProvider} | Model: ${model} | Tokens: ${res.usage?.total_tokens ?? 0}`)
+
+            return {
+              success: true,
+              data,
+              reasoning: data.reasoning || data.overall_reasoning,
+              confidence: data.confidence || data.confidence_score || 0.8,
+              tokensUsed: res.usage?.total_tokens
+            }
+          } catch (err: any) {
+            lastError = err
+            logger.warn(`⚠️ Model failed: ${model} → ${err.message}`)
+          }
+        }
+
+        logger.warn(`❌ All models failed for ${currentProvider}`)
+      } catch (err: any) {
+        lastError = err
+        logger.warn(`⚠️ Provider failed: ${currentProvider} → ${err.message}`)
       }
-    } catch (error) {
-      logger.error('OpenAI API call failed:', error)
+    }
 
-      return {
-        success: false,
-        data: null,
-        confidence: 0,
-        error: error instanceof Error ? error.message : 'Unknown error occurred'
-      }
+    logger.error(`❌ All providers failed (Gemini → OpenAI → OpenRouter)`)
+    return {
+      success: false,
+      data: null,
+      confidence: 0,
+      error: lastError?.message || 'All AI providers failed'
     }
   }
 
-  /**
-   * Analyze business model using AI
-   * Requirement 2.1: AI-powered analysis
-   */
-  async analyzeBusinessModel(websiteContent: any): Promise<AIAnalysisResponse> {
-    logger.info(`Analyzing business model for: ${websiteContent.url}`)
+  // ============================================================================
+  // Public API Methods
+  // ============================================================================
 
-    const prompt = PromptTemplates.businessModelAnalysis(websiteContent)
-    const response = await this.callOpenAI(prompt)
+  async analyzeBusinessModel(websiteContent: any, provider?: 'openai' | 'openrouter' | 'gemini', model?: string): Promise<AIAnalysisResponse> {
+    const prompt = `Analyze this website's business model and respond in JSON format with: type, description, confidence, reasoning.
 
-    if (response.success) {
-      // Validate response structure
-      const validated = this.validateBusinessModelResponse(response.data)
-      return {
-        ...response,
-        data: validated
-      }
-    }
+Website: ${websiteContent.url}
+Title: ${websiteContent.title}
+Content: ${websiteContent.text.substring(0, 1000)}`
 
-    return response
+    return this.callAI(prompt, undefined, 'analysis', provider, model)
   }
 
-  /**
-   * Analyze audience insights using AI
-   * Requirement 2.2: Audience analysis
-   */
-  async analyzeAudienceInsights(websiteContent: any): Promise<AIAnalysisResponse> {
-    logger.info(`Analyzing audience insights for: ${websiteContent.url}`)
-
+  async analyzeAudienceInsights(websiteContent: any, provider?: 'openai' | 'openrouter' | 'gemini', model?: string): Promise<AIAnalysisResponse> {
     const prompt = PromptTemplates.audienceInsightsAnalysis(websiteContent)
-    const response = await this.callOpenAI(prompt)
-
-    if (response.success) {
-      // Validate response structure
-      const validated = this.validateAudienceInsightsResponse(response.data)
-      return {
-        ...response,
-        data: validated
-      }
-    }
-
-    return response
+    return this.callAI(prompt, undefined, 'analysis', provider, model)
   }
 
-  /**
-   * Generate Meta Ads targeting recommendations
-   * Requirement 2.1: Meta targeting recommendations
-   */
-  async generateMetaTargeting(
-    websiteContent: any,
-    audienceInsights: AudienceInsights
-  ): Promise<AIAnalysisResponse> {
-    logger.info(`Generating Meta targeting recommendations for: ${websiteContent.url}`)
+  async extractValuePropositions(websiteContent: any, provider?: 'openai' | 'openrouter' | 'gemini', model?: string): Promise<AIAnalysisResponse> {
+    const prompt = `Extract value propositions from this website and respond in JSON.
 
-    const prompt = PromptTemplates.metaTargetingRecommendations(websiteContent, audienceInsights)
-    const response = await this.callOpenAI(
+Website: ${websiteContent.url}
+Headings: ${websiteContent.headings?.slice(0, 10).join(', ')}
+
+Respond with: { "value_propositions": [{ "proposition": "text", "category": "type", "strength": 0.8 }] }`
+
+    return this.callAI(prompt, undefined, 'creative', provider, model)
+  }
+
+  async analyzeContentThemes(websiteContent: any, provider?: 'openai' | 'openrouter' | 'gemini', model?: string): Promise<AIAnalysisResponse> {
+    const prompt = `Analyze content themes and respond in JSON.
+
+Content: ${websiteContent.text.substring(0, 1000)}
+
+Respond with: { "themes": [{ "theme": "name", "keywords": [], "frequency": 5, "relevance_score": 0.8 }] }`
+
+    return this.callAI(prompt, undefined, 'creative', provider, model)
+  }
+
+  async generateMetaTargeting(websiteContent: any, audience: AudienceInsights, provider?: 'openai' | 'openrouter' | 'gemini', model?: string): Promise<AIAnalysisResponse> {
+    const prompt = PromptTemplates.metaTargetingRecommendations(websiteContent, audience)
+    return this.callAI(
       prompt,
-      'You are an expert Meta Ads specialist. Generate specific, actionable targeting recommendations that comply with Meta advertising policies. Be detailed and provide clear reasoning for each recommendation.'
+      'You are an expert Meta Ads specialist. Generate specific, actionable targeting recommendations.',
+      'creative',
+      provider,
+      model
     )
-
-    if (response.success) {
-      // Validate response structure
-      const validated = this.validateMetaTargetingResponse(response.data)
-      return {
-        ...response,
-        data: validated
-      }
-    }
-
-    return response
   }
 
-  /**
-   * Generate Google Ads targeting recommendations
-   * Requirement 2.2: Google targeting recommendations
-   */
-  async generateGoogleTargeting(
-    websiteContent: any,
-    audienceInsights: AudienceInsights
-  ): Promise<AIAnalysisResponse> {
-    logger.info(`Generating Google targeting recommendations for: ${websiteContent.url}`)
-
-    const prompt = PromptTemplates.googleTargetingRecommendations(websiteContent, audienceInsights)
-    const response = await this.callOpenAI(
+  async generateGoogleTargeting(websiteContent: any, audience: AudienceInsights, provider?: 'openai' | 'openrouter' | 'gemini', model?: string): Promise<AIAnalysisResponse> {
+    const prompt = PromptTemplates.googleTargetingRecommendations(websiteContent, audience)
+    return this.callAI(
       prompt,
-      'You are an expert Google Ads specialist. Generate specific keyword clusters organized by user intent, not just syntax. Provide actionable targeting recommendations that comply with Google advertising policies. Explain the reasoning behind each recommendation.'
+      'You are an expert Google Ads specialist. Generate actionable targeting recommendations.',
+      'creative',
+      provider,
+      model
     )
-
-    if (response.success) {
-      // Validate response structure
-      const validated = this.validateGoogleTargetingResponse(response.data)
-      return {
-        ...response,
-        data: validated
-      }
-    }
-
-    return response
   }
 
-  /**
-   * Extract value propositions using AI
-   * Requirement 2.4: Explanation generation
-   */
-  async extractValuePropositions(websiteContent: any): Promise<AIAnalysisResponse> {
-    logger.info(`Extracting value propositions for: ${websiteContent.url}`)
-
-    const prompt = PromptTemplates.valuePropositionExtraction(websiteContent)
-    const response = await this.callOpenAI(prompt)
-
-    if (response.success) {
-      // Validate response structure
-      const validated = this.validateValuePropositionsResponse(response.data)
-      return {
-        ...response,
-        data: validated
-      }
-    }
-
-    return response
+  async generateKeywordFocusedMetaTargeting(
+    websiteContent: any,
+    audienceInsights: AudienceInsights,
+    keywords: string[],
+    provider?: 'openai' | 'openrouter' | 'gemini',
+    model?: string
+  ): Promise<AIAnalysisResponse> {
+    const prompt = PromptTemplates.keywordFocusedMetaTargeting(websiteContent, audienceInsights, keywords)
+    return this.callAI(
+      prompt,
+      'You are an expert Meta Ads specialist. Generate EXACTLY 10 audiences, interests, and behaviors for the keywords.',
+      'creative',
+      provider,
+      model
+    )
   }
 
-  /**
-   * Analyze content themes using AI
-   * Requirement 2.4: Content analysis
-   */
-  async analyzeContentThemes(websiteContent: any): Promise<AIAnalysisResponse> {
-    logger.info(`Analyzing content themes for: ${websiteContent.url}`)
-
-    const prompt = PromptTemplates.contentThemeAnalysis(websiteContent)
-    const response = await this.callOpenAI(prompt)
-
-    if (response.success) {
-      // Validate response structure
-      const validated = this.validateContentThemesResponse(response.data)
-      return {
-        ...response,
-        data: validated
-      }
-    }
-
-    return response
+  async generateKeywordFocusedGoogleTargeting(
+    websiteContent: any,
+    audienceInsights: AudienceInsights,
+    keywords: string[],
+    provider?: 'openai' | 'openrouter' | 'gemini',
+    model?: string
+  ): Promise<AIAnalysisResponse> {
+    const prompt = PromptTemplates.keywordFocusedGoogleTargeting(websiteContent, audienceInsights, keywords)
+    return this.callAI(
+      prompt,
+      'You are an expert Google Ads specialist. Generate keyword-focused targeting for the provided keywords.',
+      'creative',
+      provider,
+      model
+    )
   }
 
   // ============================================================================
-  // Response Validation Methods
+  // Status & Configuration
   // ============================================================================
 
-  /**
-   * Validate business model response structure
-   */
-  private validateBusinessModelResponse(data: any): BusinessModel {
-    if (!data || typeof data !== 'object') {
-      throw new Error('Invalid business model response format')
-    }
-
-    return {
-      type: data.type || 'Unknown',
-      description: data.description || '',
-      confidence: typeof data.confidence === 'number' ? data.confidence : 0.5
-    }
-  }
-
-  /**
-   * Validate audience insights response structure
-   */
-  private validateAudienceInsightsResponse(data: any): AudienceInsights {
-    if (!data || typeof data !== 'object') {
-      throw new Error('Invalid audience insights response format')
-    }
-
-    return {
-      demographics: data.demographics || {},
-      psychographics: data.psychographics || {},
-      pain_points: Array.isArray(data.pain_points) ? data.pain_points : [],
-      goals: Array.isArray(data.goals) ? data.goals : [],
-      behaviors: Array.isArray(data.behaviors) ? data.behaviors : []
-    }
-  }
-
-  /**
-   * Validate Meta targeting response structure
-   */
-  private validateMetaTargetingResponse(data: any): MetaTargetingRecommendation {
-    if (!data || typeof data !== 'object') {
-      throw new Error('Invalid Meta targeting response format')
-    }
-
-    return {
-      demographics: {
-        age_ranges: Array.isArray(data.demographics?.age_ranges) ? data.demographics.age_ranges : [],
-        genders: Array.isArray(data.demographics?.genders) ? data.demographics.genders : ['all'],
-        locations: Array.isArray(data.demographics?.locations) ? data.demographics.locations : []
-      },
-      interests: Array.isArray(data.interests) ? data.interests : [],
-      behaviors: Array.isArray(data.behaviors) ? data.behaviors : [],
-      custom_audiences: Array.isArray(data.custom_audiences) ? data.custom_audiences : [],
-      lookalike_suggestions: Array.isArray(data.lookalike_suggestions) ? data.lookalike_suggestions : []
-    }
-  }
-
-  /**
-   * Validate Google targeting response structure
-   */
-  private validateGoogleTargetingResponse(data: any): GoogleTargetingRecommendation {
-    if (!data || typeof data !== 'object') {
-      throw new Error('Invalid Google targeting response format')
-    }
-
-    return {
-      keyword_clusters: Array.isArray(data.keyword_clusters) ? data.keyword_clusters : [],
-      audiences: Array.isArray(data.audiences) ? data.audiences : [],
-      demographics: {
-        age_ranges: Array.isArray(data.demographics?.age_ranges) ? data.demographics.age_ranges : [],
-        genders: Array.isArray(data.demographics?.genders) ? data.demographics.genders : ['all'],
-        household_income: Array.isArray(data.demographics?.household_income) ? data.demographics.household_income : []
-      },
-      placements: Array.isArray(data.placements) ? data.placements : []
-    }
-  }
-
-  /**
-   * Validate value propositions response structure
-   */
-  private validateValuePropositionsResponse(data: any): ValueProposition[] {
-    if (!data || typeof data !== 'object') {
-      throw new Error('Invalid value propositions response format')
-    }
-
-    const propositions = Array.isArray(data.value_propositions) ? data.value_propositions : []
-
-    return propositions.map((vp: any) => ({
-      proposition: vp.proposition || '',
-      category: vp.category || 'general',
-      strength: typeof vp.strength === 'number' ? vp.strength : 0.5
-    }))
-  }
-
-  /**
-   * Validate content themes response structure
-   */
-  private validateContentThemesResponse(data: any): ContentTheme[] {
-    if (!data || typeof data !== 'object') {
-      throw new Error('Invalid content themes response format')
-    }
-
-    const themes = Array.isArray(data.themes) ? data.themes : []
-
-    return themes.map((theme: any) => ({
-      theme: theme.theme || '',
-      keywords: Array.isArray(theme.keywords) ? theme.keywords : [],
-      frequency: typeof theme.frequency === 'number' ? theme.frequency : 0,
-      relevance_score: typeof theme.relevance_score === 'number' ? theme.relevance_score : 0.5
-    }))
-  }
-
-  /**
-   * Check if OpenAI is configured and available
-   */
   isConfigured(): boolean {
-    return !!config.openai.apiKey
+    return !!(config.ai.geminiKey || config.ai.openaiKey || config.ai.openrouterKey)
   }
 
-  /**
-   * Get current model information
-   */
-  getModelInfo(): { model: string; maxTokens: number; temperature: number } {
+  getAvailableModels() {
     return {
-      model: this.model,
-      maxTokens: this.maxTokens,
-      temperature: this.temperature
+      gemini: {
+        available: !!config.ai.geminiKey,
+        models: this.geminiModels.creative
+      },
+      openai: {
+        available: !!config.ai.openaiKey,
+        models: this.openaiModels.creative
+      },
+      openrouter: {
+        available: !!config.ai.openrouterKey,
+        models: this.openrouterModels.creative
+      }
+    }
+  }
+
+  getModelInfo() {
+    return {
+      provider: config.ai.provider,
+      gemini: this.geminiModels.creative[0],
+      openai: this.openaiModels.creative[0],
+      openrouter: this.openrouterModels.creative[0],
+      temperature: this.temperature,
+      maxTokens: this.maxTokens
     }
   }
 }
 
-// Export singleton instance
+// Singleton
 export const aiReasoningEngine = new AIReasoningEngine()

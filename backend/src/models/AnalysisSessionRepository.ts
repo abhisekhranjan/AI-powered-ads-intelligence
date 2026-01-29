@@ -29,6 +29,7 @@ export class AnalysisSessionRepository extends BaseRepository<AnalysisSession> {
       website_url: row.website_url,
       target_location: row.target_location,
       competitor_urls: this.parseJsonField<string[]>(row.competitor_urls),
+      keywords: this.parseJsonField<string[]>(row.keywords),
       status: row.status,
       created_at: row.created_at,
       completed_at: row.completed_at,
@@ -60,6 +61,7 @@ export class AnalysisSessionRepository extends BaseRepository<AnalysisSession> {
       website_url: input.website_url,
       target_location: input.target_location || null,
       competitor_urls: input.competitor_urls || null,
+      keywords: input.keywords || null,
       status: 'pending',
       created_at: new Date(),
       completed_at: null,
@@ -70,6 +72,7 @@ export class AnalysisSessionRepository extends BaseRepository<AnalysisSession> {
     const dbData: any = {
       ...sessionData,
       competitor_urls: this.serializeJsonField(sessionData.competitor_urls),
+      keywords: this.serializeJsonField(sessionData.keywords),
       analysis_data: this.serializeJsonField(sessionData.analysis_data)
     }
 

@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import LandingPage from './pages/LandingPage'
 import AnalyzePage from './pages/AnalyzePage'
 import DashboardPage from './pages/DashboardPage'
+import ContactPage from './pages/ContactPage'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -22,6 +23,7 @@ function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/analyze" element={<AnalyzePage />} />
           <Route path="/dashboard/:sessionId" element={<DashboardPage />} />
+          <Route path="/contact" element={<ContactPage />} />
         </Routes>
       </Router>
     </QueryClientProvider>

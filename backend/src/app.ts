@@ -8,6 +8,7 @@ import healthRouter from './routes/health.js'
 import authRouter from './routes/auth.js'
 import analysisRouter from './routes/analysis.js'
 import exportRouter from './routes/export.js'
+import contactRouter from './routes/contact.js'
 
 // Create Express application
 export function createApp(): Application {
@@ -36,6 +37,7 @@ export function createApp(): Application {
   app.use(`${config.apiPrefix}/auth`, authRouter)
   app.use(`${config.apiPrefix}/analysis`, analysisRouter)
   app.use(`${config.apiPrefix}/export`, exportRouter)
+  app.use(`${config.apiPrefix}/contact`, contactRouter)
 
   // API root endpoint
   app.get(config.apiPrefix, (_req, res) => {

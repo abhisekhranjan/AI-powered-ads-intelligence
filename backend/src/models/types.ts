@@ -50,6 +50,7 @@ export interface AnalysisSession {
   website_url: string
   target_location: string | null
   competitor_urls: string[] | null
+  keywords: string[] | null
   status: AnalysisStatus
   created_at: Date
   completed_at: Date | null
@@ -61,6 +62,7 @@ export interface CreateAnalysisSessionInput {
   website_url: string
   target_location?: string
   competitor_urls?: string[]
+  keywords?: string[]
 }
 
 export interface UpdateAnalysisSessionInput {
@@ -153,6 +155,15 @@ export interface TechnicalMetadata {
   structured_data?: any
   page_load_time_ms?: number
   mobile_friendly?: boolean
+  // Extended content extraction fields
+  headings?: string[]
+  paragraphs?: string[]
+  listItems?: string[]
+  ctas?: string[]
+  headingCount?: number
+  paragraphCount?: number
+  ctaCount?: number
+  fullTextLength?: number
 }
 
 // ============================================================================

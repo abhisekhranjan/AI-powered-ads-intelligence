@@ -180,6 +180,60 @@ This implementation plan converts the RiseRoutes design into a series of increme
     - **Property 22: Progress Indication Completeness**
     - **Validates: Requirements 10.4**
 
+- [ ] 11A. Keyword-Enhanced Targeting Feature
+  - [x] 11A.1 Add keyword input field to analysis form
+    - Add optional keyword/product input field to AnalyzePage
+    - Implement keyword validation and formatting
+    - Update form submission to include keywords
+    - Update backend API to accept keywords parameter
+    - _Requirements: 10.1, 10.8_
+  
+  - [ ]* 11A.2 Write property test for keyword input acceptance
+    - **Property 26: Keyword Input Acceptance**
+    - **Validates: Requirements 10.1**
+  
+  - [x] 11A.3 Implement keyword-focused targeting generation
+    - Update Targeting Engine to accept keywords parameter
+    - Create keyword analysis and theme extraction logic
+    - Implement top 10 audiences generation for Meta and Google
+    - Implement top 10 interests generation for Meta and Google
+    - Implement top 10 behaviors generation for Meta and Google
+    - _Requirements: 10.2, 10.3, 10.4, 10.5, 10.7_
+  
+  - [ ]* 11A.4 Write property test for keyword-enhanced analysis activation
+    - **Property 27: Keyword-Enhanced Analysis Activation**
+    - **Validates: Requirements 10.2**
+  
+  - [ ]* 11A.5 Write property tests for top 10 generation
+    - **Property 28: Top 10 Audience Generation**
+    - **Property 29: Top 10 Interest Generation**
+    - **Property 30: Top 10 Behavior Generation**
+    - **Validates: Requirements 10.3, 10.4, 10.5**
+  
+  - [ ] 11A.6 Add keyword context to dashboard display
+    - Update dashboard to show keyword-specific recommendations
+    - Add visual indicators for keyword-focused results
+    - Implement keyword relevance explanations
+    - _Requirements: 10.6, 10.10_
+  
+  - [ ]* 11A.7 Write property test for keyword context indication
+    - **Property 31: Keyword Context Indication**
+    - **Validates: Requirements 10.6**
+  
+  - [x] 11A.8 Update database schema for keyword storage
+    - Add keywords field to analysis_sessions table
+    - Create migration script for schema update
+    - Update TypeScript models to include keywords
+    - _Requirements: 10.1_
+  
+  - [ ]* 11A.9 Write property test for multiple keyword analysis
+    - **Property 34: Multiple Keyword Analysis**
+    - **Validates: Requirements 10.9**
+  
+  - [ ]* 11A.10 Write property test for keyword recommendation explanation
+    - **Property 35: Keyword Recommendation Explanation**
+    - **Validates: Requirements 10.10**
+
 - [ ] 12. Dashboard Data Visualization
   - [x] 12.1 Create audience card components
     - Implement card-based audience display

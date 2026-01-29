@@ -1,250 +1,346 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
-import axios from 'axios'
+import { useNavigate, Link } from 'react-router-dom'
+import { Globe, MapPin, Users, Loader2, ArrowRight, Target, Sparkles } from 'lucide-react'
 
 export default function AnalyzePage() {
-  const [websiteUrl, setWebsiteUrl] = useState('')
-  const [location, setLocation] = useState('United States')
-  const [competitors, setCompetitors] = useState('')
+  const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const navigate = useNavigate()
+  const [thinkingMessage, setThinkingMessage] = useState('')
+  const [loadingProgress, setLoadingProgress] = useState(0)
+  const [formData, setFormData] = useState({
+    website_url: '',
+    target_location: 'United States',
+    keywords: '',
+    competitor_urls: ''
+  })
+
+  const thinkingMessages = [
+    'Understanding your service…',
+    'Analyzing website content…',
+    'Mapping buyer intent…',
+    'Identifying target audiences…',
+    'Analyzing competitor audiences…',
+    'Finding high-intent interests…',
+    'Generating Meta Ads targeting…',
+    'Creating Google Ads recommendations…',
+    'Finalizing insights…',
+    'This may take 20-30 seconds, hang tight!',
+    'AI is working hard on your analysis…',
+    'Almost there, crafting perfect targeting…',
+    'Quality insights take a moment…',
+    'Worth the wait - generating premium recommendations…'
+  ]
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
     setError('')
+    setLoading(true)
+    setLoadingProgress(0)
+    setThinkingMessage('Starting analysis...')
 
     try {
-      const response = await axios.post('http://localhost:3000/api/analysis/analyze', {
-        website_url: websiteUrl,
-        target_location: location,
-        competitor_urls: competitors.split('\n').filter(u => u.trim())
+      const response = await fetch('http://localhost:3000/api/analysis/analyze-stream', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          website_url: formData.website_url,
+          target_location: formData.target_location,
+          keywords: formData.keywords
+            ? formData.keywords.split(',').map(k => k.trim()).filter(k => k)
+            : [],
+          competitor_urls: formData.competitor_urls
+            ? formData.competitor_urls.split('\n').filter(url => url.trim())
+            : []
+        })
       })
 
-      navigate(`/dashboard/${response.data.session_id}`)
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Analysis failed. Please try again.')
-      console.error('Analysis error:', err)
-    } finally {
+      if (!response.ok || !response.body) {
+        throw new Error('Failed to start analysis')
+      }
+
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let sessionId = ''
+
+      const stepMessages: Record<string, string> = {
+        'init': 'Starting analysis...',
+        'session_created': 'Session created',
+        'extracting_website': '📄 Extracting website content...',
+        'website_extracted': '✅ Website content extracted',
+        'analyzing_competitors': '🔍 Analyzing competitors...',
+        'competitors_analyzed': '✅ Competitors analyzed',
+        'generating_demographics': '👥 Generating target demographics...',
+        'generating_interests': '💡 Generating audience interests...',
+        'generating_behaviors': '🎯 Generating audience behaviors...',
+        'meta_targeting_complete': '✅ Meta Ads targeting complete',
+        'generating_keywords': '🔑 Generating Google Ads keywords...',
+        'google_targeting_complete': '✅ Google Ads targeting complete',
+        'complete': '🎉 Analysis complete!'
+      }
+
+      const progressMap: Record<string, number> = {
+        'init': 5,
+        'session_created': 10,
+        'extracting_website': 20,
+        'website_extracted': 30,
+        'analyzing_competitors': 40,
+        'competitors_analyzed': 45,
+        'generating_demographics': 50,
+        'generating_interests': 65,
+        'generating_behaviors': 75,
+        'meta_targeting_complete': 85,
+        'generating_keywords': 90,
+        'google_targeting_complete': 95,
+        'complete': 100
+      }
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        const chunk = decoder.decode(value)
+        const lines = chunk.split('\n')
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6))
+
+              if (stepMessages[data.step]) {
+                setThinkingMessage(stepMessages[data.step])
+              }
+
+              if (progressMap[data.step]) {
+                setLoadingProgress(progressMap[data.step])
+              }
+
+              if (data.data?.session_id) {
+                sessionId = data.data.session_id
+              }
+
+              if (data.step === 'complete' && sessionId) {
+                setTimeout(() => {
+                  navigate(`/dashboard/${sessionId}`)
+                }, 500)
+              }
+
+              if (data.step === 'error') {
+                setError(data.message || 'Analysis failed. Please try again.')
+                setLoading(false)
+                return
+              }
+            } catch (err) {
+              // Ignore parse errors for incomplete chunks
+            }
+          }
+        }
+      }
+
+    } catch (err) {
+      setError('Failed to connect to server. Please try again.')
       setLoading(false)
+      setLoadingProgress(0)
     }
   }
 
   const countries = [
-    'United States', 'United Kingdom', 'Canada', 'Australia', 'India',
-    'Germany', 'France', 'Spain', 'Italy', 'Brazil', 'Mexico', 'Japan',
-    'South Korea', 'Singapore', 'United Arab Emirates', 'Saudi Arabia',
-    'South Africa', 'Netherlands', 'Sweden', 'Norway', 'Denmark', 'Finland',
-    'Poland', 'Turkey', 'Indonesia', 'Malaysia', 'Thailand', 'Philippines',
-    'Vietnam', 'New Zealand', 'Ireland', 'Switzerland', 'Austria', 'Belgium',
-    'Portugal', 'Greece', 'Czech Republic', 'Romania', 'Argentina', 'Chile',
-    'Colombia', 'Peru', 'Egypt', 'Nigeria', 'Kenya', 'Israel', 'Pakistan',
-    'Bangladesh', 'Hong Kong', 'Taiwan'
+    'United States', 'United Kingdom', 'Canada', 'Australia', 'Germany', 'France', 
+    'Spain', 'Italy', 'Netherlands', 'Belgium', 'Switzerland', 'Austria', 'Sweden',
+    'Norway', 'Denmark', 'Finland', 'Ireland', 'Portugal', 'Poland', 'Czech Republic',
+    'India', 'Singapore', 'Hong Kong', 'Japan', 'South Korea', 'Malaysia', 'Thailand',
+    'Indonesia', 'Philippines', 'Vietnam', 'United Arab Emirates', 'Saudi Arabia',
+    'Brazil', 'Mexico', 'Argentina', 'Chile', 'Colombia', 'Peru', 'South Africa',
+    'Nigeria', 'Kenya', 'Egypt', 'Morocco', 'Israel', 'Turkey', 'Greece', 'Romania',
+    'Hungary', 'Bulgaria', 'Croatia', 'New Zealand'
   ]
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 py-12">
-      <div className="container mx-auto px-4 max-w-4xl">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
+      {/* Header */}
+      <header className="border-b border-slate-700/50 backdrop-blur-sm bg-slate-900/50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center space-x-2">
+              <Target className="w-8 h-8 text-blue-500" />
+              <span className="text-xl font-bold text-white">RiseRoutes</span>
+            </div>
+            <div className="flex items-center space-x-6">
+              <Link to="/contact" className="text-slate-300 hover:text-white transition">
+                Contact
+              </Link>
+              <Link to="/" className="text-slate-300 hover:text-white transition">
+                ← Back to Home
+              </Link>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-12"
-        >
-          <h1 className="text-5xl font-bold bg-gradient-to-r from-primary-600 to-accent-500 bg-clip-text text-transparent mb-4">
-            Analyze Your Website
+        <div className="text-center mb-12">
+          <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
+            Analyze Your Ads Targeting
           </h1>
-          <p className="text-xl text-gray-600 dark:text-gray-400">
-            Get AI-powered targeting recommendations for Meta & Google Ads
+          <p className="text-xl text-slate-300">
+            Enter your website URL to get AI-powered targeting recommendations
           </p>
-        </motion.div>
+        </div>
 
-        {/* Main Form */}
-        <motion.form
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          onSubmit={handleSubmit}
-          className="bg-white dark:bg-gray-800 rounded-2xl p-8 md:p-12 shadow-2xl border border-gray-200 dark:border-gray-700"
-        >
-          {/* Error Message */}
-          {error && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-red-600 dark:text-red-400"
-            >
-              <div className="flex items-center gap-2">
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                </svg>
-                <span className="font-medium">{error}</span>
-              </div>
-            </motion.div>
-          )}
-
-          {/* Website URL */}
-          <div className="mb-8">
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-              Website URL <span className="text-red-500">*</span>
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-                </svg>
-              </div>
-              <input
-                type="url"
-                value={websiteUrl}
-                onChange={(e) => setWebsiteUrl(e.target.value)}
-                placeholder="https://example.com"
-                required
-                className="w-full pl-12 pr-4 py-4 border-2 border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/20 transition-all outline-none text-lg"
-              />
-            </div>
-            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-              Enter the website you want to analyze for ad targeting
-            </p>
-          </div>
-
-          {/* Target Location */}
-          <div className="mb-8">
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-              Target Location
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-              </div>
-              <select
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                className="w-full pl-12 pr-4 py-4 border-2 border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/20 transition-all outline-none text-lg appearance-none cursor-pointer"
-              >
-                {countries.map(country => (
-                  <option key={country} value={country}>{country}</option>
-                ))}
-              </select>
-              <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
-                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
+        {/* Form Card */}
+        <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl shadow-2xl border border-slate-700 p-8 md:p-12">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Website URL */}
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Website URL *
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <Globe className="h-5 w-5 text-slate-400" />
+                </div>
+                <input
+                  type="url"
+                  required
+                  value={formData.website_url}
+                  onChange={(e) => setFormData({ ...formData, website_url: e.target.value })}
+                  placeholder="https://example.com"
+                  className="w-full pl-12 pr-4 py-4 bg-slate-900/50 border border-slate-600 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                />
               </div>
             </div>
-            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-              Select your primary target market
-            </p>
-          </div>
 
-          {/* Competitors */}
-          <div className="mb-8">
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-              Competitor Websites <span className="text-gray-400 font-normal">(Optional)</span>
-            </label>
-            <div className="relative">
-              <textarea
-                value={competitors}
-                onChange={(e) => setCompetitors(e.target.value)}
-                placeholder="https://competitor1.com&#10;https://competitor2.com&#10;https://competitor3.com"
-                rows={5}
-                className="w-full px-4 py-4 border-2 border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/20 transition-all outline-none text-lg resize-none"
-              />
+            {/* Keywords/Products */}
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Keywords or Products (optional)
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <Sparkles className="h-5 w-5 text-slate-400" />
+                </div>
+                <input
+                  type="text"
+                  value={formData.keywords}
+                  onChange={(e) => setFormData({ ...formData, keywords: e.target.value })}
+                  placeholder="e.g., plumbing services, emergency repairs, water heaters"
+                  className="w-full pl-12 pr-4 py-4 bg-slate-900/50 border border-slate-600 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                />
+              </div>
+              <p className="mt-2 text-xs text-slate-400">
+                Add specific keywords to get focused targeting for your products or services (comma-separated)
+              </p>
             </div>
-            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-              Add competitor URLs (one per line) to identify market gaps and opportunities
-            </p>
-          </div>
 
-          {/* Submit Button */}
-          <motion.button
-            type="submit"
-            disabled={loading}
-            whileHover={{ scale: loading ? 1 : 1.02 }}
-            whileTap={{ scale: loading ? 1 : 0.98 }}
-            className="w-full px-8 py-5 bg-gradient-to-r from-primary-600 to-accent-600 text-white rounded-xl font-bold text-lg hover:from-primary-700 hover:to-accent-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
-          >
-            {loading ? (
-              <>
-                <svg className="animate-spin h-6 w-6" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
-                <span>Analyzing Your Website...</span>
-              </>
-            ) : (
-              <>
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-                <span>Analyze Ads Targeting</span>
-              </>
+            {/* Target Location */}
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Target Location
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <MapPin className="h-5 w-5 text-slate-400" />
+                </div>
+                <select
+                  value={formData.target_location}
+                  onChange={(e) => setFormData({ ...formData, target_location: e.target.value })}
+                  className="w-full pl-12 pr-4 py-4 bg-slate-900/50 border border-slate-600 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition appearance-none cursor-pointer"
+                >
+                  {countries.map(country => (
+                    <option key={country} value={country}>{country}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Competitor URLs */}
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Competitor URLs (optional, one per line)
+              </label>
+              <div className="relative">
+                <div className="absolute top-4 left-4 pointer-events-none">
+                  <Users className="h-5 w-5 text-slate-400" />
+                </div>
+                <textarea
+                  value={formData.competitor_urls}
+                  onChange={(e) => setFormData({ ...formData, competitor_urls: e.target.value })}
+                  placeholder="https://competitor1.com&#10;https://competitor2.com"
+                  rows={4}
+                  className="w-full pl-12 pr-4 py-4 bg-slate-900/50 border border-slate-600 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition resize-none"
+                />
+              </div>
+            </div>
+
+            {/* Error Message */}
+            {error && (
+              <div className="bg-red-500/10 border border-red-500/50 rounded-xl p-4">
+                <p className="text-red-400 text-sm">{error}</p>
+              </div>
             )}
-          </motion.button>
 
-          {/* Info Cards */}
-          <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="flex items-center gap-3 p-4 bg-primary-50 dark:bg-primary-900/20 rounded-xl">
-              <div className="w-10 h-10 bg-primary-100 dark:bg-primary-800 rounded-lg flex items-center justify-center flex-shrink-0">
-                <svg className="w-5 h-5 text-primary-600 dark:text-primary-400" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
-                  <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd" />
-                </svg>
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-semibold py-4 px-6 rounded-xl transition duration-200 flex items-center justify-center space-x-2 shadow-lg shadow-blue-500/50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span>{thinkingMessage || 'Analyzing...'}</span>
+                </>
+              ) : (
+                <>
+                  <span>Analyze Ads Targeting</span>
+                  <ArrowRight className="w-5 h-5" />
+                </>
+              )}
+            </button>
+            
+            {/* Progress Bar */}
+            {loading && (
+              <div className="space-y-2">
+                <div className="w-full bg-slate-700/50 rounded-full h-2 overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 transition-all duration-500 ease-out"
+                    style={{ width: `${loadingProgress}%` }}
+                  />
+                </div>
+                <p className="text-center text-xs text-slate-400">
+                  Please wait while we analyze your website and generate targeting recommendations
+                </p>
               </div>
-              <div>
-                <p className="text-xs font-semibold text-primary-600 dark:text-primary-400">AI-Powered</p>
-                <p className="text-xs text-gray-600 dark:text-gray-400">Smart Analysis</p>
+            )}
+          </form>
+
+          {/* Features */}
+          <div className="grid md:grid-cols-3 gap-6 mt-12 pt-12 border-t border-slate-700">
+            <div className="text-center">
+              <div className="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center mx-auto mb-3">
+                <Target className="w-6 h-6 text-blue-400" />
               </div>
+              <h3 className="text-sm font-semibold text-white mb-1">AI-Powered</h3>
+              <p className="text-xs text-slate-400">Advanced algorithms analyze your site</p>
             </div>
-
-            <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-900/20 rounded-xl">
-              <div className="w-10 h-10 bg-green-100 dark:bg-green-800 rounded-lg flex items-center justify-center flex-shrink-0">
-                <svg className="w-5 h-5 text-green-600 dark:text-green-400" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
+            <div className="text-center">
+              <div className="w-12 h-12 bg-green-500/10 rounded-xl flex items-center justify-center mx-auto mb-3">
+                <Globe className="w-6 h-6 text-green-400" />
               </div>
-              <div>
-                <p className="text-xs font-semibold text-green-600 dark:text-green-400">Policy-Safe</p>
-                <p className="text-xs text-gray-600 dark:text-gray-400">Compliant</p>
-              </div>
+              <h3 className="text-sm font-semibold text-white mb-1">Policy-Safe</h3>
+              <p className="text-xs text-slate-400">All recommendations comply with ad policies</p>
             </div>
-
-            <div className="flex items-center gap-3 p-4 bg-accent-50 dark:bg-accent-900/20 rounded-xl">
-              <div className="w-10 h-10 bg-accent-100 dark:bg-accent-800 rounded-lg flex items-center justify-center flex-shrink-0">
-                <svg className="w-5 h-5 text-accent-600 dark:text-accent-400" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
-                </svg>
+            <div className="text-center">
+              <div className="w-12 h-12 bg-purple-500/10 rounded-xl flex items-center justify-center mx-auto mb-3">
+                <ArrowRight className="w-6 h-6 text-purple-400" />
               </div>
-              <div>
-                <p className="text-xs font-semibold text-accent-600 dark:text-accent-400">Fast Results</p>
-                <p className="text-xs text-gray-600 dark:text-gray-400">Under 60s</p>
-              </div>
+              <h3 className="text-sm font-semibold text-white mb-1">Fast Results</h3>
+              <p className="text-xs text-slate-400">Get insights in seconds, not hours</p>
             </div>
           </div>
-        </motion.form>
-
-        {/* Back Button */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.2 }}
-          className="text-center mt-8"
-        >
-          <button
-            onClick={() => navigate('/')}
-            className="text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 font-medium transition-colors inline-flex items-center gap-2"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-            Back to Home
-          </button>
-        </motion.div>
+        </div>
       </div>
     </div>
   )

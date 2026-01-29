@@ -4,7 +4,7 @@ import { config } from '../config/env.js'
 // General API rate limiter
 export const apiLimiter = rateLimit({
   windowMs: config.rateLimit.windowMs,
-  max: config.rateLimit.maxRequests,
+  max: 1000, // Increased for development
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
@@ -22,7 +22,7 @@ export const authLimiter = rateLimit({
 // Analysis rate limiter (more restrictive for resource-intensive operations)
 export const analysisLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 10, // 10 analyses per hour
+  max: 100, // Increased for development
   message: 'Analysis limit reached. Please try again later.',
   standardHeaders: true,
   legacyHeaders: false,

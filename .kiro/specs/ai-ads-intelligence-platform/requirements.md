@@ -127,7 +127,24 @@ RiseRoutes is an AI Ads Intelligence Platform that analyzes websites and competi
 4. WHEN providing recommendations, THE RiseRoutes_Platform SHALL prioritize changes by potential impact
 5. WHEN diagnosis completes, THE RiseRoutes_Platform SHALL provide step-by-step implementation guidance
 
-### Requirement 10: System Performance and Reliability
+### Requirement 10: Keyword-Enhanced Targeting Analysis
+
+**User Story:** As a marketing professional, I want to provide specific keywords or product/service terms along with my website URL, so that the AI can generate more focused and relevant targeting recommendations for my specific offerings.
+
+#### Acceptance Criteria
+
+1. WHEN a user enters a website URL, THE RiseRoutes_Platform SHALL provide an optional keyword input field
+2. WHEN keywords are provided, THE Targeting_Engine SHALL use them to focus the analysis on specific products, services, or themes
+3. WHEN generating recommendations with keywords, THE Targeting_Engine SHALL produce top 10 target audiences specifically aligned with the keyword context
+4. WHEN generating recommendations with keywords, THE Targeting_Engine SHALL produce top 10 interests specifically relevant to the keyword and business combination
+5. WHEN generating recommendations with keywords, THE Targeting_Engine SHALL produce top 10 behaviors that indicate purchase intent for the specified keywords
+6. WHEN displaying keyword-enhanced results, THE Dashboard SHALL clearly indicate which recommendations are keyword-specific
+7. WHEN keywords are provided, THE Targeting_Engine SHALL generate separate recommendations for both Meta Ads and Google Ads platforms
+8. WHEN no keywords are provided, THE RiseRoutes_Platform SHALL perform standard website analysis without keyword focus
+9. WHEN multiple keywords are provided, THE Targeting_Engine SHALL analyze them collectively to understand the overall offering scope
+10. WHEN keyword analysis completes, THE RiseRoutes_Platform SHALL explain how each recommendation relates to the provided keywords
+
+### Requirement 11: System Performance and Reliability
 
 **User Story:** As a platform user, I want fast, reliable analysis results, so that I can trust the platform for time-sensitive campaign decisions.
 

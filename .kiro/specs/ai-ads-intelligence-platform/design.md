@@ -168,8 +168,9 @@ interface CompetitorAnalysis {
 **Key Methods:**
 ```typescript
 interface TargetingEngine {
-  generateMetaTargeting(analysis: WebsiteAnalysis, competitors: CompetitorAnalysis[]): Promise<MetaTargeting>
-  generateGoogleTargeting(analysis: WebsiteAnalysis, competitors: CompetitorAnalysis[]): Promise<GoogleTargeting>
+  generateMetaTargeting(analysis: WebsiteAnalysis, competitors: CompetitorAnalysis[], keywords?: string[]): Promise<MetaTargeting>
+  generateGoogleTargeting(analysis: WebsiteAnalysis, competitors: CompetitorAnalysis[], keywords?: string[]): Promise<GoogleTargeting>
+  generateKeywordFocusedTargeting(analysis: WebsiteAnalysis, keywords: string[]): Promise<KeywordTargeting>
   calculateConfidenceScores(targeting: TargetingRecommendation): Promise<ConfidenceScore[]>
   explainRecommendations(targeting: TargetingRecommendation): Promise<RecommendationExplanation[]>
 }
@@ -181,6 +182,7 @@ interface MetaTargeting {
   customAudiences: CustomAudienceRecommendation[]
   lookalikeSuggestions: LookalikeAudience[]
   confidenceScores: ConfidenceScore[]
+  keywordContext?: KeywordContext
 }
 
 interface GoogleTargeting {
@@ -189,15 +191,41 @@ interface GoogleTargeting {
   demographics: DemographicTargeting
   placements: PlacementRecommendation[]
   confidenceScores: ConfidenceScore[]
+  keywordContext?: KeywordContext
+}
+
+interface KeywordTargeting {
+  metaRecommendations: {
+    topAudiences: AudienceSegment[]  // Top 10
+    topInterests: InterestTargeting[]  // Top 10
+    topBehaviors: BehaviorTargeting[]  // Top 10
+  }
+  googleRecommendations: {
+    topAudiences: GoogleAudience[]  // Top 10
+    topInterests: InterestTargeting[]  // Top 10
+    topBehaviors: BehaviorTargeting[]  // Top 10
+  }
+  keywordAnalysis: KeywordAnalysis
+  explanations: KeywordExplanation[]
+}
+
+interface KeywordContext {
+  providedKeywords: string[]
+  keywordThemes: string[]
+  focusAreas: string[]
+  relevanceScores: Record<string, number>
 }
 ```
 
 **Targeting Logic:**
 - Business model-based audience mapping
 - Intent-driven keyword clustering
+- Keyword-focused targeting generation (when keywords provided)
+- Top 10 recommendations per category (audiences, interests, behaviors)
 - Competitive gap targeting
 - Confidence scoring algorithm
 - Policy compliance validation
+- Keyword relevance scoring and theme extraction
 
 ### 4. Export Manager Service
 
@@ -272,6 +300,7 @@ CREATE TABLE analysis_sessions (
     website_url VARCHAR(500) NOT NULL,
     target_location VARCHAR(100),
     competitor_urls JSON,
+    keywords JSON,
     status ENUM('pending', 'processing', 'completed', 'failed') DEFAULT 'pending',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     completed_at TIMESTAMP NULL,
@@ -529,6 +558,46 @@ Based on the prework analysis and property reflection, the following properties 
 ### Property 25: Diagnosis Result Organization
 *For any* diagnosis completion, results should be clearly separated into "What you're doing wrong" and "What you should do" categories with prioritized recommendations and implementation guidance.
 **Validates: Requirements 9.3, 9.4, 9.5**
+
+### Property 26: Keyword Input Acceptance
+*For any* analysis request, the system should accept optional keyword input and store it with the analysis session.
+**Validates: Requirements 10.1**
+
+### Property 27: Keyword-Enhanced Analysis Activation
+*For any* provided keywords, the Targeting_Engine should use them to focus the analysis on specific products, services, or themes.
+**Validates: Requirements 10.2**
+
+### Property 28: Top 10 Audience Generation
+*For any* keyword-enhanced analysis, the system should generate exactly 10 target audiences specifically aligned with the keyword context for both Meta and Google platforms.
+**Validates: Requirements 10.3**
+
+### Property 29: Top 10 Interest Generation
+*For any* keyword-enhanced analysis, the system should generate exactly 10 interests specifically relevant to the keyword and business combination for both Meta and Google platforms.
+**Validates: Requirements 10.4**
+
+### Property 30: Top 10 Behavior Generation
+*For any* keyword-enhanced analysis, the system should generate exactly 10 behaviors that indicate purchase intent for the specified keywords for both Meta and Google platforms.
+**Validates: Requirements 10.5**
+
+### Property 31: Keyword Context Indication
+*For any* keyword-enhanced results displayed in the Dashboard, the system should clearly indicate which recommendations are keyword-specific.
+**Validates: Requirements 10.6**
+
+### Property 32: Platform-Specific Keyword Recommendations
+*For any* keyword-enhanced analysis, the system should generate separate recommendations optimized for both Meta Ads and Google Ads platforms.
+**Validates: Requirements 10.7**
+
+### Property 33: Standard Analysis Fallback
+*For any* analysis request without keywords, the system should perform standard website analysis without keyword focus.
+**Validates: Requirements 10.8**
+
+### Property 34: Multiple Keyword Analysis
+*For any* multiple keywords provided, the Targeting_Engine should analyze them collectively to understand the overall offering scope.
+**Validates: Requirements 10.9**
+
+### Property 35: Keyword Recommendation Explanation
+*For any* completed keyword analysis, the system should explain how each recommendation relates to the provided keywords.
+**Validates: Requirements 10.10**
 
 ## Error Handling
 
