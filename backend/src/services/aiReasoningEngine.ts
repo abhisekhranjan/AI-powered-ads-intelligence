@@ -316,6 +316,7 @@ Respond in JSON format with keyword clusters and targeting ALL focused on the pr
 export class AIReasoningEngine {
   private openaiClient: OpenAI | null = null
   private openrouterClient: OpenAI | null = null
+  private deepseekClient: OpenAI | null = null
   private currentModel = ''
   private readonly maxTokens = 4000
   private readonly temperature = 0.7
@@ -378,6 +379,11 @@ export class AIReasoningEngine {
     creative: ['gemini-2.5-flash', 'gemini-1.5-flash']
   }
 
+  private readonly deepseekModels = {
+    analysis: ['deepseek-chat', 'deepseek-reasoner'],
+    creative: ['deepseek-chat', 'deepseek-reasoner']
+  }
+
   // ============================================================================
   // Client Initialization
   // ============================================================================
@@ -417,6 +423,23 @@ export class AIReasoningEngine {
     }
 
     return this.openrouterClient
+  }
+
+  private initializeDeepSeek(): OpenAI {
+    if (!this.deepseekClient) {
+      if (!config.ai.deepseekKey) {
+        throw new Error('DEEPSEEK_API_KEY not set')
+      }
+
+      this.deepseekClient = new OpenAI({
+        apiKey: config.ai.deepseekKey,
+        baseURL: 'https://api.deepseek.com'
+      })
+
+      logger.info('✅ DeepSeek client initialized')
+    }
+
+    return this.deepseekClient
   }
 
   private async callGemini(prompt: string, systemMessage: string): Promise<any> {
@@ -459,7 +482,7 @@ export class AIReasoningEngine {
           throw new Error(error.error?.message || `HTTP ${response.status}`)
         }
 
-        const data = await response.json()
+        const data = await response.json() as any
         const content = data.candidates?.[0]?.content?.parts?.[0]?.text
 
         if (!content) throw new Error('Empty response from Gemini')
@@ -479,8 +502,10 @@ export class AIReasoningEngine {
     throw lastError || new Error('All Gemini models failed')
   }
 
-  private getClient(provider: 'openai' | 'openrouter'): OpenAI {
-    return provider === 'openai' ? this.initializeOpenAI() : this.initializeOpenRouter()
+  private getClient(provider: 'openai' | 'openrouter' | 'deepseek'): OpenAI {
+    if (provider === 'openai') return this.initializeOpenAI()
+    if (provider === 'deepseek') return this.initializeDeepSeek()
+    return this.initializeOpenRouter()
   }
 
   // ============================================================================
@@ -510,16 +535,17 @@ export class AIReasoningEngine {
     prompt: string,
     systemMessage = 'You are an expert marketing analyst.',
     taskType: 'analysis' | 'creative' = 'creative',
-    provider?: 'openai' | 'openrouter' | 'gemini',
+    provider?: 'openai' | 'openrouter' | 'gemini' | 'deepseek',
     modelOverride?: string
   ): Promise<AIAnalysisResponse> {
-    // Priority order: 1. Gemini, 2. OpenAI, 3. OpenRouter
-    const providerOrder: Array<'gemini' | 'openai' | 'openrouter'> = ['gemini', 'openai', 'openrouter']
+    // Priority order: 1. DeepSeek, 2. Gemini, 3. OpenAI, 4. OpenRouter
+    const providerOrder: Array<'deepseek' | 'gemini' | 'openai' | 'openrouter'> = ['deepseek', 'gemini', 'openai', 'openrouter']
     
     let lastError: any = null
 
     for (const currentProvider of providerOrder) {
       // Skip if API key not configured
+      if (currentProvider === 'deepseek' && !config.ai.deepseekKey) continue
       if (currentProvider === 'gemini' && !config.ai.geminiKey) continue
       if (currentProvider === 'openai' && !config.ai.openaiKey) continue
       if (currentProvider === 'openrouter' && !config.ai.openrouterKey) continue
@@ -541,9 +567,11 @@ export class AIReasoningEngine {
           }
         }
 
-        // Handle OpenAI and OpenRouter
-        const client = this.getClient(currentProvider)
-        const models = currentProvider === 'openai' ? this.openaiModels[taskType] : this.openrouterModels[taskType]
+        // Handle OpenAI, DeepSeek, and OpenRouter (all use OpenAI-compatible API)
+        const client = this.getClient(currentProvider as 'openai' | 'openrouter' | 'deepseek')
+        const models = currentProvider === 'openai' ? this.openaiModels[taskType] 
+                     : currentProvider === 'deepseek' ? this.deepseekModels[taskType]
+                     : this.openrouterModels[taskType]
         const modelsToTry = modelOverride ? [modelOverride] : models
 
         for (const model of modelsToTry) {
@@ -588,7 +616,7 @@ export class AIReasoningEngine {
       }
     }
 
-    logger.error(`❌ All providers failed (Gemini → OpenAI → OpenRouter)`)
+    logger.error(`❌ All providers failed (DeepSeek → Gemini → OpenAI → OpenRouter)`)
     return {
       success: false,
       data: null,
@@ -601,7 +629,7 @@ export class AIReasoningEngine {
   // Public API Methods
   // ============================================================================
 
-  async analyzeBusinessModel(websiteContent: any, provider?: 'openai' | 'openrouter' | 'gemini', model?: string): Promise<AIAnalysisResponse> {
+  async analyzeBusinessModel(websiteContent: any, provider?: 'openai' | 'openrouter' | 'gemini' | 'deepseek', model?: string): Promise<AIAnalysisResponse> {
     const prompt = `Analyze this website's business model and respond in JSON format with: type, description, confidence, reasoning.
 
 Website: ${websiteContent.url}
@@ -611,12 +639,12 @@ Content: ${websiteContent.text.substring(0, 1000)}`
     return this.callAI(prompt, undefined, 'analysis', provider, model)
   }
 
-  async analyzeAudienceInsights(websiteContent: any, provider?: 'openai' | 'openrouter' | 'gemini', model?: string): Promise<AIAnalysisResponse> {
+  async analyzeAudienceInsights(websiteContent: any, provider?: 'openai' | 'openrouter' | 'gemini' | 'deepseek', model?: string): Promise<AIAnalysisResponse> {
     const prompt = PromptTemplates.audienceInsightsAnalysis(websiteContent)
     return this.callAI(prompt, undefined, 'analysis', provider, model)
   }
 
-  async extractValuePropositions(websiteContent: any, provider?: 'openai' | 'openrouter' | 'gemini', model?: string): Promise<AIAnalysisResponse> {
+  async extractValuePropositions(websiteContent: any, provider?: 'openai' | 'openrouter' | 'gemini' | 'deepseek', model?: string): Promise<AIAnalysisResponse> {
     const prompt = `Extract value propositions from this website and respond in JSON.
 
 Website: ${websiteContent.url}
@@ -627,7 +655,7 @@ Respond with: { "value_propositions": [{ "proposition": "text", "category": "typ
     return this.callAI(prompt, undefined, 'creative', provider, model)
   }
 
-  async analyzeContentThemes(websiteContent: any, provider?: 'openai' | 'openrouter' | 'gemini', model?: string): Promise<AIAnalysisResponse> {
+  async analyzeContentThemes(websiteContent: any, provider?: 'openai' | 'openrouter' | 'gemini' | 'deepseek', model?: string): Promise<AIAnalysisResponse> {
     const prompt = `Analyze content themes and respond in JSON.
 
 Content: ${websiteContent.text.substring(0, 1000)}
@@ -637,7 +665,7 @@ Respond with: { "themes": [{ "theme": "name", "keywords": [], "frequency": 5, "r
     return this.callAI(prompt, undefined, 'creative', provider, model)
   }
 
-  async generateMetaTargeting(websiteContent: any, audience: AudienceInsights, provider?: 'openai' | 'openrouter' | 'gemini', model?: string): Promise<AIAnalysisResponse> {
+  async generateMetaTargeting(websiteContent: any, audience: AudienceInsights, provider?: 'openai' | 'openrouter' | 'gemini' | 'deepseek', model?: string): Promise<AIAnalysisResponse> {
     const prompt = PromptTemplates.metaTargetingRecommendations(websiteContent, audience)
     return this.callAI(
       prompt,
@@ -648,7 +676,7 @@ Respond with: { "themes": [{ "theme": "name", "keywords": [], "frequency": 5, "r
     )
   }
 
-  async generateGoogleTargeting(websiteContent: any, audience: AudienceInsights, provider?: 'openai' | 'openrouter' | 'gemini', model?: string): Promise<AIAnalysisResponse> {
+  async generateGoogleTargeting(websiteContent: any, audience: AudienceInsights, provider?: 'openai' | 'openrouter' | 'gemini' | 'deepseek', model?: string): Promise<AIAnalysisResponse> {
     const prompt = PromptTemplates.googleTargetingRecommendations(websiteContent, audience)
     return this.callAI(
       prompt,
@@ -663,7 +691,7 @@ Respond with: { "themes": [{ "theme": "name", "keywords": [], "frequency": 5, "r
     websiteContent: any,
     audienceInsights: AudienceInsights,
     keywords: string[],
-    provider?: 'openai' | 'openrouter' | 'gemini',
+    provider?: 'openai' | 'openrouter' | 'gemini' | 'deepseek',
     model?: string
   ): Promise<AIAnalysisResponse> {
     const prompt = PromptTemplates.keywordFocusedMetaTargeting(websiteContent, audienceInsights, keywords)
@@ -680,7 +708,7 @@ Respond with: { "themes": [{ "theme": "name", "keywords": [], "frequency": 5, "r
     websiteContent: any,
     audienceInsights: AudienceInsights,
     keywords: string[],
-    provider?: 'openai' | 'openrouter' | 'gemini',
+    provider?: 'openai' | 'openrouter' | 'gemini' | 'deepseek',
     model?: string
   ): Promise<AIAnalysisResponse> {
     const prompt = PromptTemplates.keywordFocusedGoogleTargeting(websiteContent, audienceInsights, keywords)
@@ -698,11 +726,15 @@ Respond with: { "themes": [{ "theme": "name", "keywords": [], "frequency": 5, "r
   // ============================================================================
 
   isConfigured(): boolean {
-    return !!(config.ai.geminiKey || config.ai.openaiKey || config.ai.openrouterKey)
+    return !!(config.ai.deepseekKey || config.ai.geminiKey || config.ai.openaiKey || config.ai.openrouterKey)
   }
 
   getAvailableModels() {
     return {
+      deepseek: {
+        available: !!config.ai.deepseekKey,
+        models: this.deepseekModels.creative
+      },
       gemini: {
         available: !!config.ai.geminiKey,
         models: this.geminiModels.creative
@@ -721,6 +753,7 @@ Respond with: { "themes": [{ "theme": "name", "keywords": [], "frequency": 5, "r
   getModelInfo() {
     return {
       provider: config.ai.provider,
+      deepseek: this.deepseekModels.creative[0],
       gemini: this.geminiModels.creative[0],
       openai: this.openaiModels.creative[0],
       openrouter: this.openrouterModels.creative[0],

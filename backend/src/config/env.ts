@@ -27,7 +27,7 @@ const envSchema = z.object({
   JWT_EXPIRES_IN: z.string().default('7d'),
 
   // AI Provider
-  AI_PROVIDER: z.enum(['openai', 'openrouter', 'gemini']).default('openrouter'),
+  AI_PROVIDER: z.enum(['openai', 'openrouter', 'gemini', 'deepseek']).default('openrouter'),
   
   // OpenAI (Direct)
   OPENAI_API_KEY: z.string().optional(),
@@ -37,6 +37,9 @@ const envSchema = z.object({
   
   // Google Gemini
   GEMINI_API_KEY: z.string().optional(),
+  
+  // DeepSeek
+  DEEPSEEK_API_KEY: z.string().optional(),
 
   // Rate Limiting
   RATE_LIMIT_WINDOW_MS: z.string().transform(Number).default('900000'),
@@ -81,6 +84,7 @@ export const config = {
     openaiKey: parsed.data.OPENAI_API_KEY,
     openrouterKey: parsed.data.OPENROUTER_API_KEY,
     geminiKey: parsed.data.GEMINI_API_KEY,
+    deepseekKey: parsed.data.DEEPSEEK_API_KEY,
   },
   rateLimit: {
     windowMs: parsed.data.RATE_LIMIT_WINDOW_MS,

@@ -1,29 +1,25 @@
 #!/usr/bin/env tsx
 /**
- * Simple DeepSeek Model Test
- * Direct test of deepseek/deepseek-r1-0528:free via OpenRouter
+ * Simple DeepSeek API Test
+ * Direct test of DeepSeek API integration
  */
 
 import OpenAI from 'openai'
 
-const OPENROUTER_API_KEY = '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'
-const MODEL = 'openrouter/auto'
+const DEEPSEEK_API_KEY = 'sk-17cd3e167a014900a727d6e6e21a39bb'
+const MODEL = 'deepseek-chat'
 
-console.log('🧪 Testing OpenRouter Auto Model Selection\n')
-console.log(`🔧 Model: ${MODEL} (auto-selects best available model)`)
-console.log(`🔑 API Key: ${OPENROUTER_API_KEY.substring(0, 20)}...\n`)
+console.log('🧪 Testing DeepSeek API Integration\n')
+console.log(`🔧 Model: ${MODEL}`)
+console.log(`🔑 API Key: ${DEEPSEEK_API_KEY.substring(0, 20)}...\n`)
 
 const client = new OpenAI({
-  apiKey: OPENROUTER_API_KEY,
-  baseURL: 'https://openrouter.ai/api/v1',
-  defaultHeaders: {
-    'HTTP-Referer': 'https://test-app.com',
-    'X-Title': 'DeepSeek Test'
-  }
+  apiKey: DEEPSEEK_API_KEY,
+  baseURL: 'https://api.deepseek.com'
 })
 
 async function testBusinessAnalysis() {
-  console.log('📊 Test: Business Model Analysis\n')
+  console.log('📊 Test 1: Business Model Analysis\n')
   
   const prompt = `Analyze this website's business model and respond in JSON format.
 
@@ -40,7 +36,7 @@ Respond in JSON format:
 }`
 
   try {
-    console.log('⏳ Calling OpenRouter API...\n')
+    console.log('⏳ Calling DeepSeek API...\n')
     
     const response = await client.chat.completions.create({
       model: MODEL,
@@ -105,7 +101,7 @@ async function testSimpleQuestion() {
   console.log('📊 Test 2: Simple Question\n')
   
   try {
-    console.log('⏳ Calling OpenRouter API...\n')
+    console.log('⏳ Calling DeepSeek API...\n')
     
     const response = await client.chat.completions.create({
       model: MODEL,
@@ -113,6 +109,36 @@ async function testSimpleQuestion() {
       max_tokens: 500,
       messages: [
         { role: 'user', content: 'What is 2+2? Respond with just the number.' }
+      ]
+    })
+
+    const content = response.choices[0]?.message?.content
+    
+    console.log('✅ API Response:')
+    console.log(content)
+    console.log('\n📊 Tokens used:', response.usage?.total_tokens || 'N/A')
+    
+    return true
+  } catch (error: any) {
+    console.log('❌ API call failed')
+    console.error('Error:', error.message)
+    return false
+  }
+}
+
+async function testReasonerModel() {
+  console.log('\n' + '='.repeat(60))
+  console.log('📊 Test 3: DeepSeek Reasoner Model\n')
+  
+  try {
+    console.log('⏳ Calling DeepSeek API with deepseek-reasoner...\n')
+    
+    const response = await client.chat.completions.create({
+      model: 'deepseek-reasoner',
+      temperature: 0.7,
+      max_tokens: 1000,
+      messages: [
+        { role: 'user', content: 'Explain why SaaS businesses are popular. Keep it brief.' }
       ]
     })
 
@@ -141,12 +167,18 @@ async function runTests() {
   const test2 = await testSimpleQuestion()
   
   if (!test2) {
-    console.log('\n❌ Test 2 failed.')
+    console.log('\n❌ Test 2 failed. Stopping.')
     process.exit(1)
   }
   
+  const test3 = await testReasonerModel()
+  
+  if (!test3) {
+    console.log('\n⚠️ Test 3 failed (deepseek-reasoner may not be available).')
+  }
+  
   console.log('\n' + '='.repeat(60))
-  console.log('\n🎉 All tests passed! DeepSeek model is working correctly.\n')
+  console.log('\n🎉 DeepSeek API integration tests completed!\n')
 }
 
 runTests().catch(error => {
